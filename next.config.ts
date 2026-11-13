@@ -20,7 +20,7 @@ const csp = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
-  experimental: { serverActions: { bodySizeLimit: "10mb" } },
+  experimental: { serverActions: { bodySizeLimit: "10mb", allowedOrigins: process.env.NODE_ENV === "production" ? [] : ["localhost:3000", "cuddly-train-g45pv45x9466hr7-3000.app.github.dev"] } },
   async headers() {
     return [
       {

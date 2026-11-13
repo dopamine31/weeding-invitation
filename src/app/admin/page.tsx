@@ -1,4 +1,4 @@
-import { desc, eq, gt, isNull, sql } from "drizzle-orm";
+import { desc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
 import * as s from "@/db/schema";
 import { requireAdmin } from "@/server/auth";
@@ -6,6 +6,7 @@ import { computeKpi, mrrSeries } from "@/lib/billing";
 import { TEMPLATES } from "@/templates";
 import { changePlan, impersonate, softDeleteTenant, toggleSuspend } from "@/app/actions/admin";
 import { logoutAction } from "@/app/actions/auth";
+import { approvePayment, rejectPaymentAction } from "@/app/actions/payments";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Super Admin" };
@@ -30,6 +31,8 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   const queue = (await db.execute(sql`select status, count(*)::int as n from blast_messages group by status`)) as unknown as { rows: { status: string; n: number }[] };
   const [newSignups] = await db.select({ n: sql<number>`count(*)::int` }).from(s.users).where(gt(s.users.createdAt, d30));
 
+  const pending = await db.select().from(s.payments).where(inArray(s.payments.status, ["PENDING", "VERIFYING"]));
+  const wsName = new Map(wss.map((w) => [w.id, w.name]));
   const kpi = computeKpi(subs, now);
   const before = computeKpi(subs, d30);
   const canceled = subs.filter((x) => x.canceledAt && x.canceledAt > d30).length;
@@ -45,6 +48,27 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
     <main className="max-w-6xl mx-auto p-4 md:p-6 space-y-4">
       <header className="flex justify-between items-center"><h1 className="font-display text-2xl">Super Admin</h1><form action={logoutAction}><button className="btn btn-sm">Keluar</button></form></header>
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">{kpis.map(([l, v]) => <div className="card" key={l}><p className="muted text-xs">{l}</p><p className="text-lg font-semibold tabular-nums">{v}</p></div>)}</div>
+      <section className="card overflow-auto">
+        <h2 className="font-semibold mb-2">Pembayaran menunggu ({pending.length})</h2>
+        {pending.length === 0 ? <p className="muted text-sm">Tidak ada pembayaran yang menunggu.</p> : (
+          <table className="tbl"><thead><tr><th>Kode</th><th>Tenant</th><th>Paket</th><th>Nominal transfer</th><th>Pengirim</th><th>Status</th><th>Aksi</th></tr></thead><tbody>
+            {pending.map((p) => (
+              <tr key={p.id}>
+                <td className="font-mono">{p.id.slice(0, 8).toUpperCase()}</td>
+                <td>{wsName.get(p.workspaceId) ?? "-"}</td>
+                <td>{p.planId}</td>
+                <td className="tabular-nums font-semibold">{idr(p.amountIdr + p.uniqueCode)}</td>
+                <td className="text-xs">{p.senderName ? `${p.senderName}${p.senderBank ? " · " + p.senderBank : ""}` : <span className="muted">belum konfirmasi</span>}</td>
+                <td><span className={`badge ${p.status === "VERIFYING" ? "badge-ok" : ""}`}>{p.status}</span></td>
+                <td className="whitespace-nowrap">
+                  <form action={approvePayment.bind(null, p.id)} className="inline"><button className="btn btn-sm">Setujui</button></form>{" "}
+                  <form action={rejectPaymentAction.bind(null, p.id)} className="inline-flex gap-1"><input name="reason" placeholder="Alasan tolak" aria-label="Alasan tolak" className="input" style={{ minHeight: 32, width: 150 }} /><button className="btn btn-sm btn-danger">Tolak</button></form>
+                </td>
+              </tr>
+            ))}
+          </tbody></table>
+        )}
+      </section>
       <section className="card"><h2 className="font-semibold mb-3">Tren MRR (6 bulan)</h2>
         <div className="flex items-end gap-3 h-36">{series.map((x) => <div key={x.month} className="flex-1 text-center"><div className="text-[10px] muted">{(x.mrr / 1000).toFixed(0)}k</div><div className="rounded-t" style={{ height: `${(x.mrr / smax) * 100}px`, minHeight: 3, background: "var(--app-accent)" }} /><div className="text-[10px] muted mt-1">{x.month}</div></div>)}</div>
       </section>

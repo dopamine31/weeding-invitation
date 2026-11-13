@@ -1,8 +1,12 @@
+import Link from "next/link";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import * as s from "@/db/schema";
 import { currentEventPage } from "@/server/auth";
 import { startCheckout } from "@/app/actions/dashboard";
+
+const STATUS_LABEL: Record<string, string> = { PENDING: "Menunggu transfer", VERIFYING: "Sedang diperiksa", PAID: "Lunas", FAILED: "Ditolak" };
+const METHOD_LABEL: Record<string, string> = { manual: "Transfer bank", midtrans: "Midtrans" };
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Billing" };
@@ -27,8 +31,17 @@ export default async function BillingPage() {
       <section className="card overflow-auto">
         <h2 className="font-semibold mb-2">Invoice</h2>
         {pays.length === 0 ? <p className="muted text-sm">Belum ada transaksi.</p> : (
-          <table className="tbl"><thead><tr><th>Tanggal</th><th>Paket</th><th>Jumlah</th><th>Status</th><th>Metode</th></tr></thead><tbody>
-            {pays.map((p) => <tr key={p.id}><td>{p.createdAt.toLocaleDateString("id-ID")}</td><td>{p.planId}</td><td>Rp {p.amountIdr.toLocaleString("id-ID")}</td><td><span className={`badge ${p.status === "PAID" ? "badge-ok" : p.status === "FAILED" ? "badge-bad" : ""}`}>{p.status}</span></td><td>{p.provider}</td></tr>)}
+          <table className="tbl"><thead><tr><th>Tanggal</th><th>Paket</th><th>Jumlah</th><th>Status</th><th>Metode</th><th>Aksi</th></tr></thead><tbody>
+            {pays.map((p) => (
+              <tr key={p.id}>
+                <td>{p.createdAt.toLocaleDateString("id-ID")}</td>
+                <td>{p.planId}</td>
+                <td className="tabular-nums">Rp {(p.amountIdr + p.uniqueCode).toLocaleString("id-ID")}</td>
+                <td><span className={`badge ${p.status === "PAID" ? "badge-ok" : p.status === "FAILED" ? "badge-bad" : ""}`}>{STATUS_LABEL[p.status] ?? p.status}</span></td>
+                <td>{METHOD_LABEL[p.provider] ?? p.provider}</td>
+                <td>{p.provider === "manual" ? <Link href={`/pay/${p.id}`} className="btn btn-sm">{p.status === "PENDING" ? "Bayar" : "Lihat"}</Link> : null}</td>
+              </tr>
+            ))}
           </tbody></table>
         )}
       </section>

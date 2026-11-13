@@ -10,6 +10,7 @@ import { formatDate, formatTime, TZ_IANA } from "@/lib/tz";
 import { googleCalendarUrl } from "@/lib/ics";
 import { waLink } from "@/lib/phone";
 import type { InvData } from "@/server/invitation";
+import { SelfieCheckin } from "./SelfieCheckin";
 
 export interface InvitationProps {
   data: InvData;
@@ -51,6 +52,7 @@ export function Invitation({ data, toName, archived = false, readOnly = false }:
     if (t === "gift") return data.gifts.length > 0 || data.wishlist.length > 0;
     if (t === "date") return !!firstDate;
     if (t === "dress") return cfg.texts.dressColors.length > 0 || !!cfg.texts.dressNote;
+    if (t === "gallery") return (data.gallery?.length ?? 0) > 0 || data.demo;
     if (t === "seating") return true;
     return true;
   };
@@ -121,7 +123,7 @@ export function Invitation({ data, toName, archived = false, readOnly = false }:
       case "story":
         return wrap(<Reveal><p className="inv-eyebrow">{L.story}</p><h2 className="inv-h2">{L.story}</h2><div className="tl">{cfg.texts.loveStory.map((x, k) => (<div key={k}><small>{x.date}</small><h3>{x.title}</h3><p className="inv-p">{x.text}</p></div>))}</div></Reveal>);
       case "gallery":
-        return wrap(<Reveal><p className="inv-eyebrow">{L.gallery}</p><h2 className="inv-h2">{L.gallery}</h2><Gallery count={6} labels={L} /></Reveal>);
+        return wrap(<Reveal><p className="inv-eyebrow">{L.gallery}</p><h2 className="inv-h2">{L.gallery}</h2><Gallery count={6} labels={L} photos={data.gallery ?? []} /></Reveal>);
       case "live":
         return wrap(<Reveal><p className="inv-eyebrow">{L.live}</p><h2 className="inv-h2">{L.live}</h2>{subEvents.filter((x) => x.streamingUrl).map((x) => (<div key={x.id} style={{ marginBottom: 14 }}><p className="inv-p">{x.name}</p><StreamFacade url={x.streamingUrl} label={L.watch} /></div>))}</Reveal>);
       case "dress":
@@ -161,6 +163,7 @@ export function Invitation({ data, toName, archived = false, readOnly = false }:
           <Reveal>
             <p className="inv-eyebrow">{L.rsvp}</p><h2 className="inv-h2">{L.rsvp}</h2>
             <RsvpForm slug={event.slug} token={guest?.token ?? null} guestName={guest?.name ?? ""} maxPax={guest?.maxPax ?? 5} subEvents={subEvents.map((x) => ({ id: x.id, name: x.name }))} menus={data.menus} existing={guest?.rsvps ?? []} qr={guest?.qr ?? {}} labels={L} readOnly={readOnly} />
+            {guest && !readOnly && !archived && <SelfieCheckin slug={event.slug} token={guest.token} lang={event.language} />}
           </Reveal>,
         );
       case "wish":

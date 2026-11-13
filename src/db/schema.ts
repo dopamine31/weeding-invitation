@@ -77,6 +77,12 @@ export const payments = pgTable("payments", {
   kind: text("kind").notNull().default("SUBSCRIPTION"), // SUBSCRIPTION | TEMPLATE
   createdAt: created(),
   paidAt: timestamp("paid_at", { withTimezone: true }),
+  uniqueCode: integer("unique_code").notNull().default(0),
+  senderName: text("sender_name"),
+  senderBank: text("sender_bank"),
+  senderNote: text("sender_note"),
+  transferredAt: timestamp("transferred_at", { withTimezone: true }),
+  rejectReason: text("reject_reason"),
 });
 
 export const events = pgTable(
@@ -161,6 +167,7 @@ export const guests = pgTable(
     consent: boolean("consent").notNull().default(true),
     optedOut: boolean("opted_out").notNull().default(false),
     anonymizedAt: timestamp("anonymized_at", { withTimezone: true }),
+    waSentAt: timestamp("wa_sent_at", { withTimezone: true }),
     createdAt: created(),
   },
   (t) => [index("guests_event").on(t.eventId), index("guests_phone").on(t.eventId, t.phone)],
@@ -339,3 +346,19 @@ export const consentLogs = pgTable("consent_logs", {
   purpose: text("purpose").notNull(),
   createdAt: created(),
 });
+
+export const media = pgTable(
+  "media",
+  {
+    id: id(),
+    eventId: uuid("event_id").notNull(),
+    guestId: uuid("guest_id"),
+    kind: text("kind").notNull(), // GALLERY | SELFIE | PROOF
+    path: text("path").notNull(),
+    mime: text("mime").notNull(),
+    sizeBytes: integer("size_bytes").notNull().default(0),
+    sort: integer("sort").notNull().default(0),
+    createdAt: created(),
+  },
+  (t) => [index("media_event_kind").on(t.eventId, t.kind)],
+);

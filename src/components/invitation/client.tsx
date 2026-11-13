@@ -371,11 +371,16 @@ export function TableSearch({ slug, labels, readOnly }: { slug: string; labels: 
 }
 
 /* ---------- Gallery + lightbox ---------- */
-export function Gallery({ count, labels }: { count: number; labels: Labels }) {
+export function Gallery({ count, labels, photos = [] }: { count: number; labels: Labels; photos?: { id: string }[] }) {
+  const total = photos.length || count;
+  const pic = (i: number, alt: string, big = false) => photos.length ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={`/api/media/${photos[i]!.id}`} alt={alt} loading={big ? "eager" : "lazy"} style={big ? { maxWidth: "90vw", maxHeight: "80vh", objectFit: "contain" } : { width: "100%", height: "100%", objectFit: "cover" }} />
+  ) : <ArtPhoto seed={i + 2} label={alt} />;
   const [idx, setIdx] = useState<number | null>(null);
   const [zoom, setZoom] = useState(false);
   const startX = useRef(0);
-  const go = useCallback((d: number) => { setZoom(false); setIdx((i) => (i === null ? i : (i + d + count) % count)); }, [count]);
+  const go = useCallback((d: number) => { setZoom(false); setIdx((i) => (i === null ? i : (i + d + total) % total)); }, [total]);
   useEffect(() => {
     if (idx === null) return;
     const k = (e: KeyboardEvent) => { if (e.key === "Escape") setIdx(null); if (e.key === "ArrowRight") go(1); if (e.key === "ArrowLeft") go(-1); };
@@ -385,15 +390,15 @@ export function Gallery({ count, labels }: { count: number; labels: Labels }) {
   return (
     <>
       <div className="gal">
-        {Array.from({ length: count }, (_, i) => (
-          <button key={i} onClick={() => setIdx(i)} aria-label={`${labels.gallery} ${i + 1}`}><ArtPhoto seed={i + 2} label={`${labels.gallery} ${i + 1}`} /></button>
+        {Array.from({ length: total }, (_, i) => (
+          <button key={i} onClick={() => setIdx(i)} aria-label={`${labels.gallery} ${i + 1}`}>{pic(i, `${labels.gallery} ${i + 1}`)}</button>
         ))}
       </div>
       {idx !== null && (
         <div className="lb" role="dialog" aria-modal="true" aria-label={labels.gallery}
           onPointerDown={(e) => { startX.current = e.clientX; }}
           onPointerUp={(e) => { const dx = e.clientX - startX.current; if (Math.abs(dx) > 60) go(dx < 0 ? 1 : -1); }}>
-          <div style={{ transform: zoom ? "scale(1.8)" : "none", cursor: zoom ? "zoom-out" : "zoom-in" }} onClick={() => setZoom((z) => !z)}><ArtPhoto seed={idx + 2} /></div>
+          <div style={{ transform: zoom ? "scale(1.8)" : "none", cursor: zoom ? "zoom-out" : "zoom-in" }} onClick={() => setZoom((z) => !z)}>{pic(idx, labels.gallery, true)}</div>
           <button style={{ top: 16, right: 16 }} onClick={() => setIdx(null)} aria-label="Close" autoFocus>×</button>
           <button style={{ left: 12, top: "50%" }} onClick={() => go(-1)} aria-label="Previous">‹</button>
           <button style={{ right: 12, top: "50%" }} onClick={() => go(1)} aria-label="Next">›</button>

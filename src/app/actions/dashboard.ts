@@ -10,7 +10,7 @@ import { guard, requireAuth, requireEventAccess, setSession, type ActionResult, 
 import { assertEntitlement, planOf } from "@/server/entitlements";
 import { enqueueCampaign, segmentGuests, type Segment } from "@/server/blast";
 import { anonymizeEvent, deleteEventData } from "@/server/privacy";
-import { createCheckout } from "@/server/payments";
+import { createCheckout, createManualPayment } from "@/server/payments";
 import { hashPin, randomToken } from "@/lib/crypto";
 import { normalizePhone } from "@/lib/phone";
 import { detectDuplicates, failedRowsCsv, normName, validateRows, parseTable, type Mapping, type RowResult } from "@/lib/import";
@@ -506,7 +506,19 @@ export async function startCheckout(planId: string): Promise<void> {
   const [plan] = await db.select().from(s.plans).where(eq(s.plans.id, planId)).limit(1);
   if (!plan || plan.priceIdr <= 0) redirect("/dashboard/billing");
   if (!a.memberships.some((m) => m.workspaceId === a.workspaceId && m.role === "OWNER") && a.user.role !== "SUPER_ADMIN") throw new AccessError("Hanya pemilik yang dapat membeli paket.");
+  if (!process.env.MIDTRANS_SERVER_KEY) {
+    const manual = await createManualPayment(a.workspaceId, planId, plan.priceIdr);
+    redirect(`/pay/${manual.id}`);
+  }
   const [pay] = await db.insert(s.payments).values({ workspaceId: a.workspaceId, planId, amountIdr: plan.priceIdr, provider: process.env.MIDTRANS_SERVER_KEY ? "midtrans" : "mock" }).returning();
   if (!pay) redirect("/dashboard/billing");
   redirect(await createCheckout(pay.id, plan.priceIdr, plan.name, a.user.email));
+}
+
+export async function markGuestWaSent(eventId: string, guestId: string, sent: boolean): Promise<ActionResult<undefined>> {
+  return guard(async () => {
+    await requireEventAccess(eventId, "EDITOR");
+    await db.update(s.guests).set({ waSentAt: sent ? new Date() : null }).where(and(eq(s.guests.id, guestId), eq(s.guests.eventId, eventId)));
+    return ok();
+  });
 }
