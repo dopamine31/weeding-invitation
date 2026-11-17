@@ -213,6 +213,9 @@ export interface RsvpProps {
   readOnly: boolean;
 }
 
+// Jumlah tamu, menu, alergi, dan tiket QR disembunyikan (check-in pakai selfie).
+const SHOW_GUEST_DETAIL = false;
+
 export function RsvpForm(p: RsvpProps) {
   const [sub, setSub] = useState(p.subEvents[0]?.id ?? "");
   const ex = p.existing.find((e) => e.subEventId === sub);
@@ -262,7 +265,7 @@ export function RsvpForm(p: RsvpProps) {
           </label>
         ))}
       </fieldset>
-      {status === "attending" && (
+      {SHOW_GUEST_DETAIL && status === "attending" && (
         <>
           <label className="inv-label" htmlFor="rs-pax">{p.labels.pax}</label>
           <select id="rs-pax" className="inv-input" value={pax} onChange={(e) => setPax(Number(e.target.value))}>{Array.from({ length: maxPax }, (_, i) => <option key={i} value={i + 1}>{i + 1}</option>)}</select>
@@ -274,7 +277,7 @@ export function RsvpForm(p: RsvpProps) {
       <input name="website" tabIndex={-1} autoComplete="off" aria-hidden style={{ position: "absolute", left: "-9999px", width: 1, height: 1, opacity: 0 }} />
       <div className="inv-row"><button className="inv-btn" disabled={busy || p.readOnly}>{busy ? "…" : p.labels.send}</button></div>
       <div aria-live="polite" role="status" style={{ marginTop: 12, textAlign: "center", color: msg?.ok ? "var(--accent-text)" : "#b3261e" }}>{msg?.text}</div>
-      {status === "attending" && qr[sub] && (
+      {SHOW_GUEST_DETAIL && status === "attending" && qr[sub] && (
         <div style={{ textAlign: "center", marginTop: 12 }}>
           <p className="inv-eyebrow">{p.labels.ticket}</p>
           {/* eslint-disable-next-line @next/next/no-img-element */}
