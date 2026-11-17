@@ -44,3 +44,18 @@ export async function moveGalleryPhoto(eventId: string, id: string, dir: -1 | 1)
     return { ok: true, data: undefined };
   });
 }
+
+export async function deleteSelfiePhoto(eventId: string, id: string): Promise<ActionResult<undefined>> {
+  return guard(async () => {
+    await requireEventAccess(eventId, "EDITOR");
+    const [row] = await db
+      .select({ id: s.media.id })
+      .from(s.media)
+      .where(and(eq(s.media.id, id), eq(s.media.eventId, eventId), eq(s.media.kind, "SELFIE")))
+      .limit(1);
+    if (!row) return { ok: false, error: "Foto tidak ditemukan." };
+    await deleteMedia(eventId, id);
+    revalidatePath("/dashboard/attendance");
+    return { ok: true, data: undefined };
+  });
+}

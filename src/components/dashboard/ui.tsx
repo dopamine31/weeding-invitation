@@ -44,7 +44,7 @@ export function Empty({ icon, title, hint, children }: { icon: string; title: st
 
 const NAV = [
   ["/dashboard", "Ringkasan", "📊"], ["/dashboard/guests", "Tamu", "👥"], ["/dashboard/wishes", "Ucapan", "💌"], ["/dashboard/seating", "Denah Meja", "🪑"],
-  ["/dashboard/gallery", "Galeri", "🖼️"], ["/dashboard/blast", "Blast WA", "📣"], ["/dashboard/export", "Ekspor", "📤"], ["/dashboard/settings", "Pengaturan", "⚙️"], ["/dashboard/billing", "Billing", "💳"],
+  ["/dashboard/attendance", "Kehadiran", "✅"], ["/dashboard/gallery", "Galeri", "🖼️"], ["/dashboard/blast", "Blast WA", "📣"], ["/dashboard/export", "Ekspor", "📤"], ["/dashboard/settings", "Pengaturan", "⚙️"], ["/dashboard/billing", "Billing", "💳"],
 ] as const;
 
 export function NavLinks({ eventId }: { eventId: string }) {
